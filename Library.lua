@@ -167,41 +167,38 @@ function Library:CreateLabel(Properties, IsHud)
     return Library:Create(_Instance, Properties);
 end;
 
-function Library:MakeDraggableFixed(Frame, Cutoff)
-    Frame.Active = true
-    local dragging = false
-    local dragInput, mousePos, framePos
+function Library:MakeDraggable(Instance, Cutoff)
+    Instance.Active = true;
+    local isMobile = game:GetService("UserInputService").TouchEnabled
 
-    -- Mouse basınca başla
-    Frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local relativeY = input.Position.Y - Frame.AbsolutePosition.Y
-            if relativeY > (Cutoff or 40) then return end
+    local dragInput, dragStart, startPos
+    local dragSpeed = isMobile and 0.8 or 1 -- Mobile'da daha yavaş sürükleme
 
-            dragging = true
-            mousePos = input.Position
-            framePos = Frame.Position
-
+    Instance.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragStart = input.Position
+            startPos = Instance.Position
+            
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
+                    dragStart = nil
                 end
             end)
         end
     end)
 
-    Frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
+    Instance.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
 
-    game:GetService("RunService").RenderStepped:Connect(function()
-        if dragging and dragInput then
-            local delta = dragInput.Position - mousePos
-            Frame.Position = UDim2.new(
-                0, framePos.X.Offset + delta.X,
-                0, framePos.Y.Offset + delta.Y
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if input == dragInput and dragStart then
+            local delta = (input.Position - dragStart) * dragSpeed
+            Instance.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
             )
         end
     end)
