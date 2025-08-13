@@ -167,33 +167,45 @@ function Library:CreateLabel(Properties, IsHud)
     return Library:Create(_Instance, Properties);
 end;
 
-function Library:MakeDraggable(Instance, Cutoff)
-    Instance.Active = true;
+function Library:MakeDraggableFixed(Frame, Cutoff)
+    Frame.Active = true
+    local dragging = false
+    local dragInput, mousePos, framePos
 
-    Instance.InputBegan:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-            local ObjPos = Vector2.new(
-                Mouse.X - Instance.AbsolutePosition.X,
-                Mouse.Y - Instance.AbsolutePosition.Y
-            );
+    -- Mouse basınca başla
+    Frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local relativeY = input.Position.Y - Frame.AbsolutePosition.Y
+            if relativeY > (Cutoff or 40) then return end
 
-            if ObjPos.Y > (Cutoff or 40) then
-                return;
-            end;
+            dragging = true
+            mousePos = input.Position
+            framePos = Frame.Position
 
-            while InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1 or Enum.UserInputType.Touch) do
-                Instance.Position = UDim2.new(
-                    0,
-                    Mouse.X - ObjPos.X + (Instance.Size.X.Offset * Instance.AnchorPoint.X),
-                    0,
-                    Mouse.Y - ObjPos.Y + (Instance.Size.Y.Offset * Instance.AnchorPoint.Y)
-                );
-
-                RenderStepped:Wait();
-            end;
-        end;
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
     end)
-end;
+
+    Frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if dragging and dragInput then
+            local delta = dragInput.Position - mousePos
+            Frame.Position = UDim2.new(
+                0, framePos.X.Offset + delta.X,
+                0, framePos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
 
 function Library:AddToolTip(InfoStr, HoverInstance)
     local X, Y = Library:GetTextBounds(InfoStr, Library.Font, 14);
@@ -3463,79 +3475,62 @@ function Library:CreateWindow(...)
     });
 
 local TransparencyCache = {};
-local Toggled = false
-local Fading = false
+    local Toggled = false;
+    local Fading = false;
 
-function Library:Toggle()
-    if Fading then return end
-    local FadeTime = Config.MenuFadeTime
-    Fading = true
-    Toggled = not Toggled
-    ModalElement.Modal = Toggled
+    function Library:Toggle()
+        if Fading then
+            return;
+        end;
 
-    if Toggled then
-        Outer.Visible = true
+        local FadeTime = Config.MenuFadeTime;
+        Fading = true;
+        Toggled = (not Toggled);
+        ModalElement.Modal = Toggled;
 
-        task.spawn(function()
-            local State = InputService.MouseIconEnabled
+        if Toggled then
+            -- A bit scuffed, but if we're going from not toggled -> toggled we want to show the frame immediately so that the fade is visible.
+            Outer.Visible = true;
 
-            local Cursor = Drawing.new('Triangle')
-            Cursor.Thickness = 1
-            Cursor.Filled = true
-            Cursor.Visible = false
+            task.spawn(function()
+                -- TODO: add cursor fade?
+                local State = InputService.MouseIconEnabled;
 
-            local CursorOutline = Drawing.new('Triangle')
-            CursorOutline.Thickness = 1
-            CursorOutline.Filled = false
-            CursorOutline.Color = Color3.new(0,0,0)
-            CursorOutline.Visible = false
+                local Cursor = Drawing.new('Triangle');
+                Cursor.Thickness = 1;
+                Cursor.Filled = true;
+                Cursor.Visible = false;
 
-            while Toggled and ScreenGui.Parent do
-                InputService.MouseIconEnabled = true -- Roblox imleci açık
-                RenderStepped:Wait()
-            end
+                local CursorOutline = Drawing.new('Triangle');
+                CursorOutline.Thickness = 1;
+                CursorOutline.Filled = false;
+                CursorOutline.Color = Color3.new(0, 0, 0);
+                CursorOutline.Visible = false;
 
-            InputService.MouseIconEnabled = State
-            Cursor:Remove()
-            CursorOutline:Remove()
-        end)
-    end
-end
+                while Toggled and ScreenGui.Parent do
+                    InputService.MouseIconEnabled = false;
 
-do
-    local dragging = false
-    local dragInput, mousePos, framePos
+                    local mPos = InputService:GetMouseLocation();
 
-    local TitleBar = Outer:FindFirstChild("TitleBar") or Outer
-    TitleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            mousePos = input.Position
-            framePos = Outer.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
+                    Cursor.Color = Library.AccentColor;
 
-    TitleBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
+                    Cursor.PointA = Vector2.new(mPos.X, mPos.Y);
+                    Cursor.PointB = Vector2.new(mPos.X + 16, mPos.Y + 6);
+                    Cursor.PointC = Vector2.new(mPos.X + 6, mPos.Y + 16);
 
-    game:GetService("RunService").RenderStepped:Connect(function()
-        if dragging and dragInput then
-            local delta = dragInput.Position - mousePos
-            Outer.Position = UDim2.new(
-                0, framePos.X.Offset + delta.X,
-                0, framePos.Y.Offset + delta.Y
-            )
-        end
-    end)
-end
+                    CursorOutline.PointA = Cursor.PointA;
+                    CursorOutline.PointB = Cursor.PointB;
+                    CursorOutline.PointC = Cursor.PointC;
+
+                    RenderStepped:Wait();
+                end;
+
+                InputService.MouseIconEnabled = State;
+
+                Cursor:Remove();
+                CursorOutline:Remove();
+            end);
+        end;
 
         for _, Desc in next, Outer:GetDescendants() do
             local Properties = {};
