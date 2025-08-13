@@ -3462,63 +3462,80 @@ function Library:CreateWindow(...)
         Parent = ScreenGui;
     });
 
-    local TransparencyCache = {};
-    local Toggled = false;
-    local Fading = false;
+local TransparencyCache = {};
+local Toggled = false
+local Fading = false
 
-    function Library:Toggle()
-        if Fading then
-            return;
-        end;
+function Library:Toggle()
+    if Fading then return end
+    local FadeTime = Config.MenuFadeTime
+    Fading = true
+    Toggled = not Toggled
+    ModalElement.Modal = Toggled
 
-        local FadeTime = Config.MenuFadeTime;
-        Fading = true;
-        Toggled = (not Toggled);
-        ModalElement.Modal = Toggled;
+    if Toggled then
+        Outer.Visible = true
 
-        if Toggled then
-            -- A bit scuffed, but if we're going from not toggled -> toggled we want to show the frame immediately so that the fade is visible.
-            Outer.Visible = true;
+        task.spawn(function()
+            local State = InputService.MouseIconEnabled
 
-            task.spawn(function()
-                -- TODO: add cursor fade?
-                local State = InputService.MouseIconEnabled;
+            local Cursor = Drawing.new('Triangle')
+            Cursor.Thickness = 1
+            Cursor.Filled = true
+            Cursor.Visible = false
 
-                local Cursor = Drawing.new('Triangle');
-                Cursor.Thickness = 1;
-                Cursor.Filled = true;
-                Cursor.Visible = false;
+            local CursorOutline = Drawing.new('Triangle')
+            CursorOutline.Thickness = 1
+            CursorOutline.Filled = false
+            CursorOutline.Color = Color3.new(0,0,0)
+            CursorOutline.Visible = false
 
-                local CursorOutline = Drawing.new('Triangle');
-                CursorOutline.Thickness = 1;
-                CursorOutline.Filled = false;
-                CursorOutline.Color = Color3.new(0, 0, 0);
-                CursorOutline.Visible = false;
+            while Toggled and ScreenGui.Parent do
+                InputService.MouseIconEnabled = true -- Roblox imleci açık
+                RenderStepped:Wait()
+            end
 
-                while Toggled and ScreenGui.Parent do
-                    InputService.MouseIconEnabled = false;
+            InputService.MouseIconEnabled = State
+            Cursor:Remove()
+            CursorOutline:Remove()
+        end)
+    end
+end
 
-                    local mPos = InputService:GetMouseLocation();
+do
+    local dragging = false
+    local dragInput, mousePos, framePos
 
-                    Cursor.Color = Library.AccentColor;
+    local TitleBar = Outer:FindFirstChild("TitleBar") or Outer
+    TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            mousePos = input.Position
+            framePos = Outer.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
 
-                    Cursor.PointA = Vector2.new(mPos.X, mPos.Y);
-                    Cursor.PointB = Vector2.new(mPos.X + 16, mPos.Y + 6);
-                    Cursor.PointC = Vector2.new(mPos.X + 6, mPos.Y + 16);
+    TitleBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
 
-                    CursorOutline.PointA = Cursor.PointA;
-                    CursorOutline.PointB = Cursor.PointB;
-                    CursorOutline.PointC = Cursor.PointC;
-
-                    RenderStepped:Wait();
-                end;
-
-                InputService.MouseIconEnabled = State;
-
-                Cursor:Remove();
-                CursorOutline:Remove();
-            end);
-        end;
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if dragging and dragInput then
+            local delta = dragInput.Position - mousePos
+            Outer.Position = UDim2.new(
+                0, framePos.X.Offset + delta.X,
+                0, framePos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
 
         for _, Desc in next, Outer:GetDescendants() do
             local Properties = {};
