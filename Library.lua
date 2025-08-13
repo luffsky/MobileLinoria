@@ -168,44 +168,57 @@ function Library:CreateLabel(Properties, IsHud)
 end;
 -- sssssssssssssssssssssssssssssssssssssssssssssssssss
 function Library:MakeDraggable(instance)
+    -- Servisleri tanımla
     local UserInputService = game:GetService("UserInputService")
-    local titleBar = instance.Container.Title
-    local isDragging = false
+    local RunService = game:GetService("RunService")
+    
+    -- Doğru elementleri bul
+    local dragElement = instance:FindFirstChild("TopBar") or instance:FindFirstChildOfClass("TextLabel") or instance
+    local dragToggle = false
+    local dragStart = nil
+    local startPos = nil
+    
+    -- Sürükleme fonksiyonu
+    local function UpdateDrag(input)
+        local delta = input.Position - dragStart
+        instance.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+    end
 
-    titleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDragging = true
-            local dragStart = input.Position
-            local frameStart = instance.Position
-
-            local connection
-            connection = input.Changed:Connect(function()
+    -- Input bağlantıları
+    dragElement.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragToggle = true
+            dragStart = input.Position
+            startPos = instance.Position
+            
+            -- Touch için özel ayar
+            if input.UserInputType == Enum.UserInputType.Touch then
+                dragElement.InputChanged:Connect(function(input)
+                    if dragToggle and input.UserInputType == Enum.UserInputType.Touch then
+                        UpdateDrag(input)
+                    end
+                end)
+            end
+            
+            input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
-                    isDragging = false
-                    connection:Disconnect()
+                    dragToggle = false
                 end
-            end)
-
-            local RunService = game:GetService("RunService")
-            local renderStepped
-            renderStepped = RunService.RenderStepped:Connect(function()
-                if not isDragging then 
-                    renderStepped:Disconnect()
-                    return 
-                end
-                local dragEnd = UserInputService:GetMouseLocation()
-                local delta = dragEnd - dragStart
-                instance.Position = UDim2.new(
-                    frameStart.X.Scale, frameStart.X.Offset + delta.X,
-                    frameStart.Y.Scale, frameStart.Y.Offset + delta.Y
-                )
             end)
         end
     end)
 
-    instance.InputChanged:Connect(function(input)
-        if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            pcall(function() input:PreventDefault() end)
+    -- Mouse hareketi
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            if dragToggle then
+                UpdateDrag(input)
+            end
         end
     end)
 end
