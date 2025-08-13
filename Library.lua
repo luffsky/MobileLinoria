@@ -166,46 +166,50 @@ function Library:CreateLabel(Properties, IsHud)
 
     return Library:Create(_Instance, Properties);
 end;
-
+-- sssssssssssssssssssssssssssssssssssssssssssssssssss
 function Library:MakeDraggable(instance)
-    local titleBar = instance.Container.Title  -- Başlık kısmını seç
-    local isDragging = false  -- Sürükleme durumu kontrolü
+    local UserInputService = game:GetService("UserInputService")
+    local titleBar = instance.Container.Title
+    local isDragging = false
 
     titleBar.InputBegan:Connect(function(input)
-        -- Sadece sol tık/touch ile başlat
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDragging = true
             local dragStart = input.Position
             local frameStart = instance.Position
 
-            -- Sürükleme esnasında diğer inputları engelle
             local connection
             connection = input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     isDragging = false
-                    connection:Disconnect()  -- Temizlik
+                    connection:Disconnect()
                 end
             end)
 
-            while isDragging and task.wait() do
+            local RunService = game:GetService("RunService")
+            local renderStepped
+            renderStepped = RunService.RenderStepped:Connect(function()
+                if not isDragging then 
+                    renderStepped:Disconnect()
+                    return 
+                end
                 local dragEnd = UserInputService:GetMouseLocation()
                 local delta = dragEnd - dragStart
                 instance.Position = UDim2.new(
                     frameStart.X.Scale, frameStart.X.Offset + delta.X,
                     frameStart.Y.Scale, frameStart.Y.Offset + delta.Y
                 )
-            end
+            end)
         end
     end)
 
-    -- Başlık dışındaki alanlarda sürüklemeyi iptal et
     instance.InputChanged:Connect(function(input)
         if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            input:PreventDefault()  -- Diğer etkileşimleri blokla
+            pcall(function() input:PreventDefault() end)
         end
     end)
 end
-
+-- sssssssssssssssssssssssssssssssssssssssssssssssssss
 function Library:AddToolTip(InfoStr, HoverInstance)
     local X, Y = Library:GetTextBounds(InfoStr, Library.Font, 14);
     local Tooltip = Library:Create('Frame', {
