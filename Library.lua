@@ -167,35 +167,43 @@ function Library:CreateLabel(Properties, IsHud)
     return Library:Create(_Instance, Properties);
 end;
 -- sssssssssssssssssssssssssssssssssssssssssssssssssss
-function Library:MakeDraggable(Frame, Header)
-    assert(Frame and Header, "Frame ve Header gereklidir")
+function Library:MakeDraggable(Frame, DragArea)
+    if not Frame or not DragArea then
+        warn("MakeDraggable: Geçersiz parametre! Frame veya DragArea bulunamadı.")
+        return
+    end
 
-    Header.Active = true
+    Frame.Active = true
+    DragArea.Active = true
+
     local UserInputService = game:GetService("UserInputService")
-    local dragInput, dragStart, startPos
-    local dragSpeed = 1.2
+    local dragging, dragInput, dragStart, startPos
 
-    Header.InputBegan:Connect(function(input)
+    local isMobile = UserInputService.TouchEnabled
+    local dragSpeed = isMobile and 1 or 1.2
+
+    DragArea.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
             dragStart = input.Position
             startPos = Frame.Position
 
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
-                    dragStart = nil
+                    dragging = false
                 end
             end)
         end
     end)
 
-    Header.InputChanged:Connect(function(input)
+    DragArea.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragStart then
+        if input == dragInput and dragging then
             local delta = (input.Position - dragStart) * dragSpeed
             Frame.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + delta.X,
@@ -204,18 +212,6 @@ function Library:MakeDraggable(Frame, Header)
         end
     end)
 end
-
--- Örnek kullanım:
-local menuFrame = MainWindow.Frame
-local headerFrame = menuFrame.Header -- Menü üst kısmı, slider içermemeli
-Library:MakeDraggable(menuFrame, headerFrame)
-
--- Slider kendi Input fonksiyonu ile bağımsız kalır
-Slider.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        -- slider dragging logic
-    end
-end)
 -- sssssssssssssssssssssssssssssssssssssssssssssssssss
 function Library:AddToolTip(InfoStr, HoverInstance)
     local X, Y = Library:GetTextBounds(InfoStr, Library.Font, 14);
