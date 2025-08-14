@@ -167,18 +167,19 @@ function Library:CreateLabel(Properties, IsHud)
     return Library:Create(_Instance, Properties);
 end;
 -- sssssssssssssssssssssssssssssssssssssssssssssssssss
-function Library:MakeDraggable(Instance, Cutoff)
-    Instance.Active = true;
-    local isMobile = game:GetService("UserInputService").TouchEnabled
+function Library:MakeDraggable(Instance, DraggableArea)
+    if not DraggableArea then return end -- Sadece başlık çubuğu veya belirlenen alan sürüklenebilir
+    DraggableArea.Active = true
 
+    local UserInputService = game:GetService("UserInputService")
     local dragInput, dragStart, startPos
-    local dragSpeed = isMobile and 1 or 1.2 -- Mobile'da daha yavaş sürükleme
+    local dragSpeed = UserInputService.TouchEnabled and 1 or 1.2
 
-    Instance.InputBegan:Connect(function(input)
-        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+    DraggableArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragStart = input.Position
             startPos = Instance.Position
-            
+
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragStart = nil
@@ -187,13 +188,13 @@ function Library:MakeDraggable(Instance, Cutoff)
         end
     end)
 
-    Instance.InputChanged:Connect(function(input)
+    DraggableArea.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
 
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
+    UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragStart then
             local delta = (input.Position - dragStart) * dragSpeed
             Instance.Position = UDim2.new(
