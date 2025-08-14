@@ -168,18 +168,23 @@ function Library:CreateLabel(Properties, IsHud)
 end;
 -- sssssssssssssssssssssssssssssssssssssssssssssssssss
 function Library:MakeDraggable(Instance, DraggableArea)
-    if not DraggableArea then return end -- Sadece başlık çubuğu veya belirlenen alan sürüklenebilir
-    DraggableArea.Active = true
+    -- Tip kontrolü ekleyelim
+    if typeof(Instance) ~= "Instance" or typeof(DraggableArea) ~= "Instance" then
+        warn("MakeDraggable: Instance veya DraggableArea geçerli değil! Instance:", Instance, "DraggableArea:", DraggableArea)
+        return
+    end
 
-    local UserInputService = game:GetService("UserInputService")
+    DraggableArea.Active = true
+    local isMobile = game:GetService("UserInputService").TouchEnabled
+
     local dragInput, dragStart, startPos
-    local dragSpeed = UserInputService.TouchEnabled and 1 or 1.2
+    local dragSpeed = isMobile and 1 or 1.2 -- Mobile'da daha yavaş sürükleme
 
     DraggableArea.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
             dragStart = input.Position
             startPos = Instance.Position
-
+            
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragStart = nil
@@ -194,7 +199,7 @@ function Library:MakeDraggable(Instance, DraggableArea)
         end
     end)
 
-    UserInputService.InputChanged:Connect(function(input)
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
         if input == dragInput and dragStart then
             local delta = (input.Position - dragStart) * dragSpeed
             Instance.Position = UDim2.new(
