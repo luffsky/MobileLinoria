@@ -167,23 +167,24 @@ function Library:CreateLabel(Properties, IsHud)
     return Library:Create(_Instance, Properties);
 end;
 -- sssssssssssssssssssssssssssssssssssssssssssssssssss
-function Library:MakeDraggable(Instance, DraggableArea)
-    -- Tip kontrolü
-    if typeof(Instance) ~= "Instance" or typeof(DraggableArea) ~= "Instance" then
-        warn("MakeDraggable: Instance veya DraggableArea geçerli değil!", Instance, DraggableArea)
+function Library:MakeDraggable(Instance, DragArea)
+    if typeof(Instance) ~= "Instance" or typeof(DragArea) ~= "Instance" then
+        warn("MakeDraggable: Geçersiz parametre!", Instance, DragArea)
         return
     end
-    if not Instance:IsA("GuiObject") or not DraggableArea:IsA("GuiObject") then
-        warn("MakeDraggable: Sadece GuiObject türleri destekleniyor!", Instance, DraggableArea)
+    if not Instance:IsA("GuiObject") or not DragArea:IsA("GuiObject") then
+        warn("MakeDraggable: Sadece GuiObject destekleniyor!", Instance, DragArea)
         return
     end
 
-    DraggableArea.Active = true
+    print("MakeDraggable çağrıldı:", Instance:GetFullName(), DragArea:GetFullName())
+
+    DragArea.Active = true
     local UserInputService = game:GetService("UserInputService")
     local dragInput, dragStart, startPos
     local dragSpeed = UserInputService.TouchEnabled and 1 or 1.2
 
-    DraggableArea.InputBegan:Connect(function(input)
+    DragArea.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragStart = input.Position
             startPos = Instance.Position
@@ -196,7 +197,7 @@ function Library:MakeDraggable(Instance, DraggableArea)
         end
     end)
 
-    DraggableArea.InputChanged:Connect(function(input)
+    DragArea.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
